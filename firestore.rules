@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Orders are created by anonymous customers and managed by the cashier app.
+    // The cashier uses the same Firebase project, so authenticated access is
+    // required. Do not publish the database with public read/write access.
+    match /orders/{orderId} {
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid;
+      allow read: if request.auth != null;
+      allow update: if request.auth != null
+        && request.resource.data.ts == resource.data.ts
+        && request.resource.data.r == resource.data.r;
+      allow delete: if false;
+    }
+
+    // Shared application settings/menu. Access is limited to authenticated
+    // sessions. The cashier PIN in the UI is still a convenience lock, not
+    // an authorization boundary; protect your Firebase project accordingly.
+    match /appData/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Kept for compatibility with older builds.
+    match /settings/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /menu/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
